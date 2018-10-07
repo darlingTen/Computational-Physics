@@ -1,0 +1,212 @@
+2.10 Generalize the program developed for the previous problem so that it can deal with situations in which the target is at a different altitude than the cannon. Consider cases in which the target is higher and lower than the cannon. Also investigate how the minimum firing velocity required to hit the target varies as the altitude of the target is varied. （需要如同书上图2.4一样考虑风阻的影响）
+
+#改变目标点的高度即是改变大炮与目标的相对高度，设目标点的纵坐标为h
+import math
+import pylab as pl
+pi = math.pi
+class cannon:
+    def __init__(self, time_step = 0.01, init_x_label = 0, 
+                init_y_label = 0, launch_angle = 60, g = 9.8,
+                init_v =100, h = 0, b = 0):
+        #定义所需要素
+        self.g = g
+        self.dt = time_step
+        self.x_label = [init_x_label]
+        self.y_label = [init_y_label]
+        self.vx = init_v * math.cos(launch_angle * pi/180)
+        self.vy = init_v * math.sin(launch_angle * pi/180)
+        self.h = h
+        self.b = b
+        print("initial velocity ->", init_v)
+        print("initial height ->", init_y_label)
+        print("launch angle ->", launch_angle)
+        print("time step ->", time_step)
+    def addhcalculate(self):
+        if self.h <= 0:
+            while self.y_label[-1] >= self.h :
+                Xtmp = self.x_label[-1] + self.vx * self.dt
+                self.x_label.append(Xtmp)
+                self.vy = self.vy - self.g * self.dt
+                Ytmp = self.y_label[-1] + self.vy * self.dt
+                self.y_label.append(Ytmp)
+            self.x_label[-1] = (self.y_label[-2] - self.h) * (self.x_label[-1] - \
+                        self.x_label[-2]) / (self.y_label[-2] - \
+                                    self.y_label[-1]) + self.x_label[-2]
+            self.y_label[-1] = self.h
+        else:
+            while self.y_label[-1] >= self.h or max(self.y_label) == self.y_label[-1]:
+                Xtmp = self.x_label[-1] + self.vx * self.dt
+                self.x_label.append(Xtmp)
+                self.vy = self.vy - self.g * self.dt
+                Ytmp = self.y_label[-1] + self.vy * self.dt
+                self.y_label.append(Ytmp)
+            self.x_label[-1] = (self.y_label[-2] - self.h) * (self.x_label[-1] - \
+                        self.x_label[-2]) / (self.y_label[-2] - \
+                                    self.y_label[-1]) + self.x_label[-2]
+            self.y_label[-1] = self.h
+
+a50 = cannon(launch_angle = 50,h =100)
+a50.addhcalculate()
+a40 = cannon(launch_angle = 40, h = -300)
+a40.addhcalculate()
+pl.plot(a50.x_label,a50.y_label,a40.x_label,a40.y_label)
+pl.show()
+#展示不同高度情况下的炮弹轨迹
+
+class addfh(cannon):#考虑风阻的影响
+    f = 0
+    def fhcalculate(self):
+        if self.h <= 0:
+            while self.y_label[-1] >= self.h :
+                f = self.b * pow((self.vx**2 + self.vy**2),0.5)
+                self.vx = self.vx - f * self.vx * self.dt
+                Xtmp = self.x_label[-1] + self.vx * self.dt
+                self.x_label.append(Xtmp)
+                self.vy = self.vy - self.g * self.dt - f * self.vy *self.dt
+                Ytmp = self.y_label[-1] + self.vy * self.dt
+                self.y_label.append(Ytmp)
+            self.x_label[-1] = (self.y_label[-2] - self.h) * (self.x_label[-1] - \
+                        self.x_label[-2]) / (self.y_label[-2] - \
+                                    self.y_label[-1]) + self.x_label[-2]
+            self.y_label[-1] = self.h
+        else:
+            while self.y_label[-1] >= self.h or max(self.y_label) == self.y_label[-1]:
+                f = self.b * pow((self.vx**2 + self.vy**2),0.5)
+                self.vx = self.vx - f * self.vx * self.dt
+                Xtmp = self.x_label[-1] + self.vx * self.dt
+                self.x_label.append(Xtmp)
+                self.vy = self.vy - self.g * self.dt - f * self.vy *self.dt
+                Ytmp = self.y_label[-1] + self.vy * self.dt
+                self.y_label.append(Ytmp)
+            
+            self.x_label[-1] = (self.y_label[-2] - self.h) * (self.x_label[-1] - \
+                        self.x_label[-2]) / (self.y_label[-2] - \
+                                    self.y_label[-1]) + self.x_label[-2]
+            self.y_label[-1] = self.h
+            
+a40 = addfh(launch_angle = 50, h = 100, b = 0.0001)
+a40.fhcalculate()
+a50 = cannon(launch_angle = 50, h = 100)
+a50.addhcalculate()
+pl.plot(a40.x_label,a40.y_label,a50.x_label,a50.y_label)
+#图像对比
+
+#下面讨论炮弹如何击中目标
+#我的想法是使炮弹速度从 0 开始增加，并对0～90的角度进行遍历，在给定相差高度和距离的情况下将炮弹轨迹的x
+#坐标有无超过给定距离的点（且满足上面讨论中最后一个y坐标等于h）作为判断条件
+#因为加了阻力后若v过小会产生负值所以对原轨迹代码进行修正
+import math
+import pylab as pl
+pi = math.pi
+class cannon:
+    def __init__(self, time_step = 0.01, init_x_label = 0, 
+                init_y_label = 0, launch_angle = 60, g = 9.8,
+                init_v =100, h = 0, b = 0):#定义所需要素
+        self.g = g
+        self.dt = time_step
+        self.x_label = [init_x_label]
+        self.y_label = [init_y_label]
+        self.vx = init_v * math.cos(launch_angle * pi/180)
+        self.vy = init_v * math.sin(launch_angle * pi/180)
+        self.h = h
+        self.b = b
+       # print("initial velocity ->", init_v)计算过程中会有很多次循环 故不输出初始条件
+       # print("target height ->", self.h)
+       # print("launch angle ->", launch_angle)
+class addfh(cannon):#考虑风阻的影响
+    f = 0
+    def fhcalculate(self):
+        if self.h <= 0:
+            while self.y_label[-1] >= self.h and self.vx > 0:
+                f = self.b * pow((self.vx**2 + self.vy**2),0.5)
+                self.vx = self.vx - f * self.vx * self.dt
+                Xtmp = self.x_label[-1] + self.vx * self.dt
+                self.x_label.append(Xtmp)
+                self.vy = self.vy - self.g * self.dt - f * self.vy *self.dt
+                Ytmp = self.y_label[-1] + self.vy * self.dt
+                self.y_label.append(Ytmp)
+            if self.x_label[-1] > 0 and self.y_label[-1] < 0:
+                self.x_label[-1] = (self.y_label[-2] - self.h) * (self.x_label[-1] - \
+                            self.x_label[-2]) / (self.y_label[-2] - \
+                                        self.y_label[-1]) + self.x_label[-2]
+                self.y_label[-1] = self.h
+        else:
+            while self.y_label[-1] >= self.h or max(self.y_label) == self.y_label[-1] and self.vx > 0:
+                f = self.b * pow((self.vx**2 + self.vy**2),0.5)
+                self.vx = self.vx - f * self.vx * self.dt
+                Xtmp = self.x_label[-1] + self.vx * self.dt
+                self.x_label.append(Xtmp)
+                self.vy = self.vy - self.g * self.dt - f * self.vy *self.dt
+                Ytmp = self.y_label[-1] + self.vy * self.dt
+                self.y_label.append(Ytmp)
+            if self.x_label[-1] > 0 and self.y_label[-1] > 0:
+                self.x_label[-1] = (self.y_label[-2] - self.h) * (self.x_label[-1] - \
+                            self.x_label[-2]) / (self.y_label[-2] - \
+                                        self.y_label[-1]) + self.x_label[-2]
+                self.y_label[-1] = self.h
+           
+#假定目标坐标为（x = 100，h = 100） 我们设初始速度从 1 开始
+x = 100
+h = 100
+v = 1
+a = addfh(launch_angle = 0, h = h, b = 0.0001, init_v = v)
+a.fhcalculate()
+while a.x_label[-1] < x:
+    v += 0.2
+    for A in range(0,90,5):
+        a = addfh(launch_angle = A, h = h, b = 0.0001, init_v = v)
+        a.fhcalculate()
+        if a.x_label[-1] > x :#原轨迹代码中有对y坐标的判断，故在此只需对x进行判断
+            break
+pl.plot(a.x_label,a.y_label)
+print(a.x_label[-1],a.y_label[-1])#输出落点坐标，精度调节可以从遍历的步距和dt等调节
+pl.show()
+
+#假定目标坐标为（x = 100，h = -100） 我们设初始速度从 1 开始
+x = 100
+h = -100
+v = 1
+a = addfh(launch_angle = 0, h = h, b = 0.0001, init_v = v)
+a.fhcalculate()
+while a.x_label[-1] < x:
+    v += 0.2
+    for A in range(0,90,5):
+        a = addfh(launch_angle = A, h = h, b = 0.0001, init_v = v)
+        a.fhcalculate()
+        if a.x_label[-1] > x :#原轨迹代码中有对y坐标的判断，故在此只需对x进行判断
+            break
+pl.plot(a.x_label,a.y_label)
+print(a.x_label[-1],a.y_label[-1])#输出落点坐标，精度调节可以从遍历的步距和dt等调节
+pl.show()
+
+#修正程序，输出最小速度和对应高度
+class target(addfh):
+    def attack(self, x = 100, h = 100, v = 1):
+        self.x = x
+        self.h = h
+        self.v = v
+        a = addfh(launch_angle = 0, h = self.h, b = 0.0001, init_v = self.v)
+        a.fhcalculate()
+        while a.x_label[-1] < self.x:
+            self.v += 0.2
+            for A in range(0,90,5):
+                a = addfh(launch_angle = A, h = self.h, b = 0.0001, init_v = self.v)
+                a.fhcalculate()
+                if a.x_label[-1] > self.x :#原轨迹代码中有对y坐标的判断，故在此只需对x进行判断
+                    break
+        #pl.plot(a.x_label,a.y_label)
+        #print(a.x_label[-1],a.y_label[-1],self.v)#输出落点坐标，精度调节可以从遍历的步距和dt等调节
+        #pl.show()
+        return self.v,self.h
+    #由上面target类中attack可得到每次的minv 和 h
+    #将一系列的minv 和 h 组合可得下图
+    #若 h 的范围从-200～200，结果如下
+minvs = list()
+hs = list()
+for i in range(-200,200,50):
+    a = target()
+    minv,h = a.attack(h=i)
+    minvs.append(minv)
+    hs.append(h)
+pl.plot(hs,minvs)
+pl.show()
